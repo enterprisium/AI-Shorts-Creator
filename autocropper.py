@@ -50,7 +50,9 @@ def segment_video(response):
 
 #Face Detection function
 def detect_faces(video_file):
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    face_cascade = cv2.CascadeClassifier(
+        f'{cv2.data.haarcascades}haarcascade_frontalface_default.xml'
+    )
 
     # Load the video
     cap = cv2.VideoCapture(video_file)
@@ -77,11 +79,7 @@ def detect_faces(video_file):
     cap.release()
 
     # If faces detected, return the list of faces
-    if len(faces) > 0:
-        return faces
-
-    # If no faces detected, return None
-    return None
+    return faces if faces else None
 
 
 
@@ -236,9 +234,7 @@ def is_talking_in_batch(frames):
 
     # Determine if talking behavior is present based on motion scores
     threshold = 0.5  # Adjust the threshold as needed
-    talking = any(score > threshold for score in motion_scores)
-
-    return talking
+    return any(score > threshold for score in motion_scores)
 
 def calculate_motion_score(frame1, frame2):
     # Convert frames to grayscale
@@ -251,10 +247,7 @@ def calculate_motion_score(frame1, frame2):
     # Calculate magnitude of optical flow vectors
     magnitude = np.sqrt(flow[..., 0] ** 2 + flow[..., 1] ** 2)
 
-    # Calculate motion score as the average magnitude of optical flow vectors
-    motion_score = np.mean(magnitude)
-
-    return motion_score
+    return np.mean(magnitude)
 
 def adjust_focus(frame, talking):
     if talking:
@@ -274,7 +267,9 @@ def adjust_focus(frame, talking):
     return frame
 def get_face_coordinates(frame):
     # Load the pre-trained Haar cascade classifier for face detection
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    face_cascade = cv2.CascadeClassifier(
+        f'{cv2.data.haarcascades}haarcascade_frontalface_default.xml'
+    )
 
     # Convert frame to grayscale for face detection
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -342,10 +337,10 @@ interseting_seg='''[{'text': 'happiness through Curiosity on Dr', 'start': 0.0, 
 
 def main():
     video_id='92nse3cvG_Y'
-    url = 'https://www.youtube.com/watch?v='+video_id  # Replace with your video's URL
+    url = f'https://www.youtube.com/watch?v={video_id}'
     filename = 'input_video.mp4'
     download_video(url,filename)
-    
+
     transcript = get_transcript(video_id)
     print(transcript)
     interesting_segment = analyze_transcript(transcript)
@@ -355,7 +350,7 @@ def main():
     print(parsed_content)
     #pdb.set_trace()
     segment_video(parsed_content)
-    
+
     # Loop through each segment
     for i in range(0, 3):  # Replace 3 with the actual number of segments
         input_file = f'output{str(i).zfill(3)}.mp4'
