@@ -336,12 +336,12 @@ interseting_seg='''[{'text': 'happiness through Curiosity on Dr', 'start': 0.0, 
 
 def main():
     video_id='92nse3cvG_Y'
-    url = 'https://www.youtube.com/watch?v='+video_id  # Replace with your video's URL
+    url = f'https://www.youtube.com/watch?v={video_id}'
     filename = 'input_video.mp4'
     download_video(url,filename)
 
     transcript = get_transcript(video_id)
-    print(transcript)   
+    print(transcript)
     interesting_segment = analyze_transcript(transcript)
     print(interesting_segment)
     content = interesting_segment["content"]
