@@ -9,10 +9,6 @@ Original file is located at
 Cell 1: Installing necessary libraries
 """
 
-!pip install pytube
-!pip install opencv-python
-!pip install openai
-!pip install youtube-transcript-api
 
 """Cell 2: Importing libraries and setting OpenAI API key"""
 
@@ -26,7 +22,7 @@ import math
 import pdb
 
 from youtube_transcript_api import YouTubeTranscriptApi
-openai.api_key = ''  # Replace with your actual OpenAI API key
+openai.api_key = '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'  # Replace with your actual OpenAI API key
 
 """Cell 3: Download YouTube Video function"""
 
@@ -60,7 +56,7 @@ def detect_faces(video_file):
     faces = []
 
     # Detect and store unique faces
-    while len(faces) < 5:
+    while len(faces) < 8:
         ret, frame = cap.read()
         if ret:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -110,7 +106,7 @@ def crop_video(faces, input_file, output_file):
 
             # Create a VideoWriter object to save the output video
             fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            output_video = cv2.VideoWriter(output_file, fourcc, 30.0, (target_width, target_height))
+            output_video = cv2.VideoWriter(output_file, fourcc, cap.get(cv2.CAP_PROP_FPS), (target_width, target_height))
 
             # Loop through each frame of the input video
             while True:
@@ -275,7 +271,7 @@ def get_face_coordinates(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Detect faces in the frame
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(10, 10))
 
     if len(faces) > 0:
         # Return the coordinates of the first detected face
@@ -287,7 +283,7 @@ def get_face_coordinates(frame):
 
 def get_transcript(video_id):
     # Get the transcript for the given YouTube video ID
-    transcript = YouTubeTranscriptApi.get_transcript(video_id)
+    transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['pt'])
 
     # Format the transcript for feeding into GPT-4
     formatted_transcript = ''
@@ -317,9 +313,9 @@ response_obj='''[
   },
 ]'''
 def analyze_transcript(transcript):
-    prompt = f"This is a transcript of a video. Please identify the 3 most viral sections from the whole, make sure they are more than 30 seconds in duration,Make Sure you provide extremely accurate timestamps respond only in this format {response_obj}  \n Here is the Transcription:\n{transcript}"
+    prompt = f"Esta é a transcrição de um vídeo. Identifique as 3 seções mais virais do vídeo, certifique-se de que tenham mais de 30 segundos de duração. Certifique-se de fornecer timestamps extremamente precisos e responda apenas neste formato {response_obj} \n Aqui está a transcrição:\n{transcript}"
     messages = [
-        {"role": "system", "content": "You are a ViralGPT helpful assistant. You are master at reading youtube transcripts and identifying the most Interesting and Viral Content"},
+        {"role": "system", "content": "Você é um assistente ViralGPT prestativo. Você é mestre em ler transcrições do YouTube e identificar o conteúdo mais interessante e viral."},
         {"role": "user", "content": prompt}
     ]
     response = openai.ChatCompletion.create(
@@ -329,6 +325,9 @@ def analyze_transcript(transcript):
         n=1,
         stop=None
     )
+    print(response)
+    for choice in response.choices:
+        print(choice)
     return response.choices[0]['message']
 
 """Main function and execution"""
@@ -337,7 +336,7 @@ interseting_seg='''[{'text': 'happiness through Curiosity on Dr', 'start': 0.0, 
 
 def main():
     video_id='92nse3cvG_Y'
-    url = f'https://www.youtube.com/watch?v={video_id}'
+    url = 'https://www.youtube.com/watch?v='+video_id  # Replace with your video's URL
     filename = 'input_video.mp4'
     download_video(url,filename)
 
