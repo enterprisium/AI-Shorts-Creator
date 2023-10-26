@@ -341,7 +341,7 @@ def main():
     download_video(url,filename)
 
     transcript = get_transcript(video_id)
-    print(transcript)
+    print(transcript)   
     interesting_segment = analyze_transcript(transcript)
     print(interesting_segment)
     content = interesting_segment["content"]
