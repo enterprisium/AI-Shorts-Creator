@@ -9,10 +9,6 @@ Original file is located at
 Cell 1: Installing necessary libraries
 """
 
-!pip install pytube
-!pip install opencv-python
-!pip install openai
-!pip install youtube-transcript-api
 
 """Cell 2: Importing libraries and setting OpenAI API key"""
 
@@ -26,7 +22,7 @@ import math
 import pdb
 
 from youtube_transcript_api import YouTubeTranscriptApi
-openai.api_key = ''  # Replace with your actual OpenAI API key
+openai.api_key = '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'  # Replace with your actual OpenAI API key
 
 """Cell 3: Download YouTube Video function"""
 
@@ -50,7 +46,9 @@ def segment_video(response):
 
 #Face Detection function
 def detect_faces(video_file):
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    face_cascade = cv2.CascadeClassifier(
+        f'{cv2.data.haarcascades}haarcascade_frontalface_default.xml'
+    )
 
     # Load the video
     cap = cv2.VideoCapture(video_file)
@@ -58,7 +56,7 @@ def detect_faces(video_file):
     faces = []
 
     # Detect and store unique faces
-    while len(faces) < 5:
+    while len(faces) < 8:
         ret, frame = cap.read()
         if ret:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -77,11 +75,7 @@ def detect_faces(video_file):
     cap.release()
 
     # If faces detected, return the list of faces
-    if len(faces) > 0:
-        return faces
-
-    # If no faces detected, return None
-    return None
+    return faces if faces else None
 
 
 
@@ -112,7 +106,7 @@ def crop_video(faces, input_file, output_file):
 
             # Create a VideoWriter object to save the output video
             fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            output_video = cv2.VideoWriter(output_file, fourcc, 30.0, (target_width, target_height))
+            output_video = cv2.VideoWriter(output_file, fourcc, cap.get(cv2.CAP_PROP_FPS), (target_width, target_height))
 
             # Loop through each frame of the input video
             while True:
@@ -236,9 +230,7 @@ def is_talking_in_batch(frames):
 
     # Determine if talking behavior is present based on motion scores
     threshold = 0.5  # Adjust the threshold as needed
-    talking = any(score > threshold for score in motion_scores)
-
-    return talking
+    return any(score > threshold for score in motion_scores)
 
 def calculate_motion_score(frame1, frame2):
     # Convert frames to grayscale
@@ -251,10 +243,7 @@ def calculate_motion_score(frame1, frame2):
     # Calculate magnitude of optical flow vectors
     magnitude = np.sqrt(flow[..., 0] ** 2 + flow[..., 1] ** 2)
 
-    # Calculate motion score as the average magnitude of optical flow vectors
-    motion_score = np.mean(magnitude)
-
-    return motion_score
+    return np.mean(magnitude)
 
 def adjust_focus(frame, talking):
     if talking:
@@ -274,13 +263,15 @@ def adjust_focus(frame, talking):
     return frame
 def get_face_coordinates(frame):
     # Load the pre-trained Haar cascade classifier for face detection
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    face_cascade = cv2.CascadeClassifier(
+        f'{cv2.data.haarcascades}haarcascade_frontalface_default.xml'
+    )
 
     # Convert frame to grayscale for face detection
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Detect faces in the frame
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(10, 10))
 
     if len(faces) > 0:
         # Return the coordinates of the first detected face
@@ -290,9 +281,9 @@ def get_face_coordinates(frame):
     # If no face detected, return None
     return None
 
-def get_transcript(video_id):
+def get_transcript(video_id, lang):
     # Get the transcript for the given YouTube video ID
-    transcript = YouTubeTranscriptApi.get_transcript(video_id)
+    transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
 
     # Format the transcript for feeding into GPT-4
     formatted_transcript = ''
@@ -322,9 +313,9 @@ response_obj='''[
   },
 ]'''
 def analyze_transcript(transcript):
-    prompt = f"This is a transcript of a video. Please identify the 3 most viral sections from the whole, make sure they are more than 30 seconds in duration,Make Sure you provide extremely accurate timestamps respond only in this format {response_obj}  \n Here is the Transcription:\n{transcript}"
+    prompt = f"Esta é a transcrição de um vídeo. Identifique as 3 seções mais virais do vídeo, certifique-se de que tenham mais de 30 segundos de duração. Certifique-se de fornecer timestamps extremamente precisos e responda apenas neste formato {response_obj} \n Aqui está a transcrição:\n{transcript}"
     messages = [
-        {"role": "system", "content": "You are a ViralGPT helpful assistant. You are master at reading youtube transcripts and identifying the most Interesting and Viral Content"},
+        {"role": "system", "content": "Você é um assistente ViralGPT prestativo. Você é mestre em ler transcrições do YouTube e identificar o conteúdo mais interessante e viral."},
         {"role": "user", "content": prompt}
     ]
     response = openai.ChatCompletion.create(
@@ -334,6 +325,9 @@ def analyze_transcript(transcript):
         n=1,
         stop=None
     )
+    print(response)
+    for choice in response.choices:
+        print(choice)
     return response.choices[0]['message']
 
 """Main function and execution"""
@@ -341,12 +335,12 @@ def analyze_transcript(transcript):
 interseting_seg='''[{'text': 'happiness through Curiosity on Dr', 'start': 0.0, 'duration': 4.82}, {'text': 'eclipse', 'start': 2.28, 'duration': 2.54}, {'text': 'little rookie question for you okay and', 'start': 6.899, 'duration': 4.021}, {'text': "I'm asking this on behalf of mainstream", 'start': 9.24, 'duration': 3.6}, {'text': 'media how do you feel when you see', 'start': 10.92, 'duration': 5.4}, {'text': 'movies like pathan or tiger or any', 'start': 12.84, 'duration': 5.939}, {'text': "Indian I think we haven't got the art of", 'start': 16.32, 'duration': 4.5}, {'text': 'doing those movies you think they can be', 'start': 18.779, 'duration': 4.321}, {'text': 'done better oh yes I mean they can be', 'start': 20.82, 'duration': 3.42}, {'text': 'realistic', 'start': 23.1, 'duration': 3.12}, {'text': "okay we're not realistic what you see", 'start': 24.24, 'duration': 4.32}, {'text': 'what is not realistic about them huh', 'start': 26.22, 'duration': 4.219}, {'text': "it's not realistic", 'start': 28.56, 'duration': 4.38}, {'text': "you're trying to make a James Bond movie", 'start': 30.439, 'duration': 5.741}, {'text': 'which is also not realistic okay', 'start': 32.94, 'duration': 5.88}, {'text': 'then you have this story of the isi girl', 'start': 36.18, 'duration': 4.74}, {'text': 'in the raw man', 'start': 38.82, 'duration': 4.86}, {'text': 'living happily ever after I mean', 'start': 40.92, 'duration': 4.639}, {'text': 'take a break', 'start': 43.68, 'duration': 7.08}, {'text': 'has that ever happened not really right', 'start': 45.559, 'duration': 7.48}, {'text': 'no the whole atmospherics of the whole', 'start': 50.76, 'duration': 3.54}, {'text': 'thing you know', 'start': 53.039, 'duration': 3.36}, {'text': "I haven't seen batana and I won't see it", 'start': 54.3, 'duration': 5.099}, {'text': "because I don't think it is an accurate", 'start': 56.399, 'duration': 4.98}, {'text': "depiction it's not an accurate I'm not", 'start': 59.399, 'duration': 4.941}, {'text': 'going to waste my time', 'start': 61.379, 'duration': 2.961}, {'text': 'and I laughed and I enjoyed that because', 'start': 65.18, 'duration': 6.28}, {'text': 'it was so quaint', 'start': 68.04, 'duration': 5.7}, {'text': 'not because it was defeating anything', 'start': 71.46, 'duration': 3.659}, {'text': 'yeah', 'start': 73.74, 'duration': 5.4}, {'text': 'like you had that other movie of um', 'start': 75.119, 'duration': 7.5}, {'text': 'war that they can no this was this', 'start': 79.14, 'duration': 5.82}, {'text': 'fellow Salman Khan going under a tunnel', 'start': 82.619, 'duration': 5.281}, {'text': 'into Pakistan to deliver a girl who had', 'start': 84.96, 'duration': 4.88}, {'text': 'got legendary', 'start': 87.9, 'duration': 4.14}, {'text': 'but whatever', 'start': 89.84, 'duration': 4.86}, {'text': 'I mean', 'start': 92.04, 'duration': 2.66}, {'text': 'could I exaggerated okay this is not you', 'start': 95.46, 'duration': 5.4}, {'text': 'have to have entertainment which is fun', 'start': 99.0, 'duration': 4.079}, {'text': 'and realistic you should see that movie', 'start': 100.86, 'duration': 3.36}, {'text': 'The', 'start': 103.079, 'duration': 4.86}, {'text': 'Bridge of spies hey that is a real movie', 'start': 104.22, 'duration': 6.78}, {'text': 'okay that is how real spy movies are', 'start': 107.939, 'duration': 5.521}, {'text': 'made what does a real spy movie', 'start': 111.0, 'duration': 5.46}, {'text': 'constitute it means dealing with actual', 'start': 113.46, 'duration': 5.64}, {'text': 'facts no no blonde round no nothing', 'start': 116.46, 'duration': 4.74}, {'text': "around it's okay living a lonely life", 'start': 119.1, 'duration': 4.799}, {'text': "you're living on by yourself living your", 'start': 121.2, 'duration': 6.0}, {'text': 'cover story he able uh', 'start': 123.899, 'duration': 5.821}, {'text': 'with goldfish was actually a notice so', 'start': 127.2, 'duration': 3.839}, {'text': 'he was doing paintings he used to make', 'start': 129.72, 'duration': 3.78}, {'text': 'him make money out of it and but he was', 'start': 131.039, 'duration': 5.161}, {'text': 'doing this other job also so running is', 'start': 133.5, 'duration': 5.099}, {'text': 'espionage ring', 'start': 136.2, 'duration': 4.92}, {'text': 'and they show all that how a documents', 'start': 138.599, 'duration': 5.22}, {'text': 'are exchanged or document information is', 'start': 141.12, 'duration': 4.86}, {'text': 'exchanged you have things called letter', 'start': 143.819, 'duration': 5.941}, {'text': 'dead letter boxes a dead letter box in', 'start': 145.98, 'duration': 7.2}, {'text': 'in Espionage is a place it could be a', 'start': 149.76, 'duration': 6.42}, {'text': "book let's say or or that statue I put", 'start': 153.18, 'duration': 6.48}, {'text': 'my UBS under it', 'start': 156.18, 'duration': 5.279}, {'text': 'and leave it', 'start': 159.66, 'duration': 5.46}, {'text': 'and leave a sign outside on some tree or', 'start': 161.459, 'duration': 4.801}, {'text': 'a wall', 'start': 165.12, 'duration': 5.759}, {'text': "that I've I've fed the the dead litter", 'start': 166.26, 'duration': 6.42}, {'text': 'box okay so the other chap comes and', 'start': 170.879, 'duration': 3.661}, {'text': 'picks it up and takes it away the two', 'start': 172.68, 'duration': 4.26}, {'text': 'never meet based on the true nature of', 'start': 174.54, 'duration': 3.72}, {'text': 'espionage', 'start': 176.94, 'duration': 4.2}, {'text': "which Indian actor's style would be best", 'start': 178.26, 'duration': 7.259}, {'text': 'suited to portray the character of a spy', 'start': 181.14, 'duration': 6.84}, {'text': 'you know I I saw um', 'start': 185.519, 'duration': 4.921}, {'text': 'three three three actors were three or', 'start': 187.98, 'duration': 4.679}, {'text': 'four actors were very good this kind of', 'start': 190.44, 'duration': 3.299}, {'text': 'a thing', 'start': 192.659, 'duration': 3.901}, {'text': 'who could fit into these kind Sorrows', 'start': 193.739, 'duration': 6.481}, {'text': 'not giving any order of preference but', 'start': 196.56, 'duration': 7.02}, {'text': 'I like nawazuddin Siddiqui I used to', 'start': 200.22, 'duration': 5.599}, {'text': 'like Imran Khan', 'start': 203.58, 'duration': 4.439}, {'text': 'Irfan Khan sorry', 'start': 205.819, 'duration': 6.28}, {'text': 'and he was he was a consummate actor', 'start': 208.019, 'duration': 8.821}, {'text': 'Anup anupam care and', 'start': 212.099, 'duration': 8.241}, {'text': 'these two actors', 'start': 216.84, 'duration': 3.5}, {'text': 'the one who played family man um', 'start': 220.62, 'duration': 6.96}, {'text': 'very good okay they could fit into the', 'start': 224.84, 'duration': 8.02}, {'text': 'room and Mishra pankaj Mishra foreign', 'start': 227.58, 'duration': 5.28}, {'text': '[Music]', 'start': 233.72, 'duration': 3.11}, {'text': "spy all right it's a cold war story", 'start': 259.699, 'duration': 6.461}, {'text': "about the the it's actually based on", 'start': 263.52, 'duration': 5.179}, {'text': 'this Cambridge 5.', 'start': 266.16, 'duration': 5.9}, {'text': 'you know the Cambridge five those', 'start': 268.699, 'duration': 6.341}, {'text': 'Kim philby and others who were spying', 'start': 272.06, 'duration': 6.1}, {'text': 'for who were actually with the MI6 but', 'start': 275.04, 'duration': 6.0}, {'text': 'it was actually a KGB agent okay the', 'start': 278.16, 'duration': 5.58}, {'text': 'real mole and he would have been Chief', 'start': 281.04, 'duration': 4.08}, {'text': 'maybe one day', 'start': 283.74, 'duration': 4.08}, {'text': 'at the not been caught out', 'start': 285.12, 'duration': 7.579}, {'text': 'so on that is made a novel Tinker spy', 'start': 287.82, 'duration': 7.26}, {'text': "it's beautifully done the book is", 'start': 292.699, 'duration': 6.241}, {'text': 'marvelous and the acting and the', 'start': 295.08, 'duration': 3.86}, {'text': 'you should watch it okay and watch this', 'start': 302.78, 'duration': 6.04}, {'text': 'uh Bridge of spies if you enjoyed this', 'start': 305.88, 'duration': 5.9}, {'text': 'video subscribe TRS clips for more', 'start': 308.82, 'duration': 15.86}, {'text': '[Music]', 'start': 311.78, 'duration': 15.33}, {'text': 'thank you', 'start': 324.68, 'duration': 8.55}, {'text': '[Music]', 'start': 327.11, 'duration': 6.12}]''';
 
 def main():
-    video_id='92nse3cvG_Y'
-    url = 'https://www.youtube.com/watch?v='+video_id  # Replace with your video's URL
+    video_id='PxhhJyk5_nQ'
+    url = f'https://www.youtube.com/watch?v={video_id}'
     filename = 'input_video.mp4'
     download_video(url,filename)
-    
-    transcript = get_transcript(video_id)
+    lang = 'pt'
+    transcript = get_transcript(video_id, lang)
     print(transcript)
     interesting_segment = analyze_transcript(transcript)
     print(interesting_segment)
@@ -355,7 +349,7 @@ def main():
     print(parsed_content)
     #pdb.set_trace()
     segment_video(parsed_content)
-    
+
     # Loop through each segment
     for i in range(0, 3):  # Replace 3 with the actual number of segments
         input_file = f'output{str(i).zfill(3)}.mp4'
