@@ -24,11 +24,9 @@ def generate_transcript(filename):
     )
 
     response = client.recognize(config=config, audio=audio)
-    transcript = ""
-    for result in response.results:
-        transcript += result.alternatives[0].transcript + " "
-
-    return transcript
+    return "".join(
+        f"{result.alternatives[0].transcript} " for result in response.results
+    )
 
 # Function to analyze the transcript using OpenAI's GPT-3
 def analyze_transcript(transcript):
@@ -42,29 +40,34 @@ def analyze_transcript(transcript):
 # Function to segment the video using FFmpeg
 def segment_video(filename):
     output_path = "segmented_videos/"
-    ffmpeg.input(filename).output(output_path + "segment%d.mp4", segment_time=30).run()
+    ffmpeg.input(filename).output(
+        f"{output_path}segment%d.mp4", segment_time=30
+    ).run()
 
 # Function to detect faces in a video segment using OpenCV
 def detect_faces(segment):
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    face_cascade = cv2.CascadeClassifier(
+        f"{cv2.data.haarcascades}haarcascade_frontalface_default.xml"
+    )
     gray = cv2.cvtColor(segment, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-    return faces
+    return face_cascade.detectMultiScale(gray, 1.1, 4)
 
 # Function to crop the video around the detected face using FFmpeg
 def crop_video(segment, face):
     x, y, w, h = face
     output_path = "cropped_videos/"
-    ffmpeg.input(segment).crop(x, y, w, h).output(output_path + "cropped_video.mp4").run()
+    ffmpeg.input(segment).crop(x, y, w, h).output(
+        f"{output_path}cropped_video.mp4"
+    ).run()
 
 # Function to compile the selected clips into a single video using FFmpeg
 def compile_clips(interesting_segments_times):
-    input_files = []
-    for i, time in enumerate(interesting_segments_times):
-        input_files.append(f"cropped_videos/cropped_video{i}.mp4")
-
+    input_files = [
+        f"cropped_videos/cropped_video{i}.mp4"
+        for i, time in enumerate(interesting_segments_times)
+    ]
     output_path = "compiled_video/"
-    ffmpeg.concat(*input_files).output(output_path + "compiled_video.mp4").run()
+    ffmpeg.concat(*input_files).output(f"{output_path}compiled_video.mp4").run()
 
 def main():
     # Download video
